@@ -86,8 +86,7 @@ public class MainClient {
             // check the direction of flow
             // reverse the direction if we've just
             // filled the top or bottom rail
-            if (row == 0 || row == key - 1)
-                dirDown = !dirDown;
+            if (row == 0 || row == key - 1) dirDown = !dirDown;
 
             // fill the corresponding alphabet
             rail[row][col++] = text.charAt(i);
@@ -109,6 +108,7 @@ public class MainClient {
         }
         return result.toString();
     }
+
     public static String decryptRailFence(String cipher, int key) {
         // create the matrix to cipher plain text
         // key = rows , length(text) = columns
@@ -221,8 +221,7 @@ public class MainClient {
                     receiveMessage();
                     connected = odd_even_game();
                 }
-                default ->
-                    coloredPrint("Enter a VALID option from set {0, 1, 2, 3}", RED);
+                default -> coloredPrint("Enter a VALID option from set {0, 1, 2, 3}", RED);
             }
         }
         coloredPrint("Connection Closed!", RED);
@@ -291,6 +290,8 @@ public class MainClient {
     public void receiveMessage() {
         try {
             String serverMessage = in.readLine();
+            coloredPrint("Server" + " ⇒ " + serverMessage, BRIGHT_BLACK);
+            serverMessage = decryptRailFence(serverMessage, (int) sharedSecretKey);
             String current_timestamp = new SimpleDateFormat("HH:mm:ss").format(new Date());
             System.out.println(RED + current_timestamp + " ⇒ " + RESET + BLUE + "Server : " + serverMessage);
         } catch (IOException e) {

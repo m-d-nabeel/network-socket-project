@@ -59,8 +59,7 @@ public class MainServer {
             // check the direction of flow
             // reverse the direction if we've just
             // filled the top or bottom rail
-            if (row == 0 || row == key - 1)
-                dirDown = !dirDown;
+            if (row == 0 || row == key - 1) dirDown = !dirDown;
 
             // fill the corresponding alphabet
             rail[row][col++] = text.charAt(i);
@@ -176,7 +175,8 @@ public class MainServer {
     private void sendMessage(String msg, Socket clientConnection, InetSocketAddress clientAddress, String clientName) {
         try {
             PrintWriter out = new PrintWriter(clientConnection.getOutputStream(), true);
-            out.println(msg);
+            String encrypted_text = encryptRailFence(msg, (int) sharedSecretKey);
+            out.println(encrypted_text);
         } catch (IOException e) {
             coloredPrint("[UNABLE TO SEND MESSAGE TO " + userList.get(clientAddress + clientName).get("name") + "]: " + e.getMessage() + "...\n", RED);
             userList.remove(clientAddress + clientName);
@@ -234,9 +234,9 @@ public class MainServer {
             }
         }
         if (isPalindrome) {
-            sendMessage(GREEN + "Your input is a Palindrome!!!🥳🥳" + RESET, clientConnection, clientAddress, clientName);
+            sendMessage(GREEN + "Your input is a Palindrome!!! (/≧▽≦)/" + RESET, clientConnection, clientAddress, clientName);
         } else {
-            sendMessage(RED + "Your input is not a Palindrome🥹🥹" + RESET, clientConnection, clientAddress, clientName);
+            sendMessage(RED + "Your input is not a Palindrome. (´。＿。｀)" + RESET, clientConnection, clientAddress, clientName);
         }
     }
 
@@ -261,8 +261,15 @@ public class MainServer {
         boolean connected = true;
         String clientName = "Unknown User";
         // Initial Connection
-        String keyObject = new Gson().toJson(new KeyExchangeData(G, P), KeyExchangeData.class);
-        sendMessage(keyObject, clientConnection, clientAddress, clientName);
+        String keyObjectMsg = new Gson().toJson(new KeyExchangeData(G, P), KeyExchangeData.class);
+
+        // Sending Unencrypted Data
+        try {
+            PrintWriter out = new PrintWriter(clientConnection.getOutputStream(), true);
+            out.println(keyObjectMsg);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         try {
             String serverPublicKey = String.valueOf(power(G, serverPrivateKey, P));
             BufferedReader in = new BufferedReader(new InputStreamReader(clientConnection.getInputStream()));
@@ -270,7 +277,13 @@ public class MainServer {
             long clientPublicKey = Long.parseLong(receivedKey);
             sharedSecretKey = power(clientPublicKey, serverPrivateKey, P);
             coloredPrint("Shared Secret Key = " + sharedSecretKey, BRIGHT_BLACK);
-            sendMessage(serverPublicKey, clientConnection, clientAddress, clientName);
+            // Sending Unencrypted Data
+            try {
+                PrintWriter out = new PrintWriter(clientConnection.getOutputStream(), true);
+                out.println(serverPublicKey);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         } catch (IOException e) {
             coloredPrint("[UNABLE TO RECEIVE MESSAGE FROM (" + clientName + ")", RED);
             String current_timestamp = new SimpleDateFormat("HH:mm:ss").format(new Date());
