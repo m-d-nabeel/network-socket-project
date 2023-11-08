@@ -14,6 +14,7 @@ import java.util.*;
 
 import static com.network.Encryption.decryptRailFence;
 import static com.network.Encryption.encryptRailFence;
+import static com.network.UtilFunctions.getTimestamp;
 
 public class MainServer {
 
@@ -29,6 +30,7 @@ public class MainServer {
     private static final String PALINDROME = "check_for_palindrome_please";
     private static final String ODD_EVEN = "check_for_odd_even_please";
     private static final String CLIENT_TEXT = "initiate_client_message";
+    private static final String GET_RECEIVED_MESSAGES = "get_all_received_messages";
     // ANSI escape codes for text colors
     private static final String RESET = "\u001B[0m";
     private static final String RED = "\u001B[31m";
@@ -36,6 +38,8 @@ public class MainServer {
     private static final String YELLOW = "\u001B[33m";
     private static final String BLUE = "\u001B[34m";
     private static final String BRIGHT_BLACK = "\u001B[90m";
+    private final Map<String, Map<String, List<String>>> textMessagesSent = new HashMap<>();
+    private final Map<String, Map<String, List<String>>> textMessagesReceived = new HashMap<>();
     private final Map<String, Map<String, String>> userList = new HashMap<>();
     private long sharedSecretKey;
 
@@ -70,7 +74,7 @@ public class MainServer {
         }
     }
 
-    private void coloredPrint(String text, String color) {
+    private void coloredPrint(Object text, String color) {
         System.out.println(color + text + RESET);
     }
 
@@ -94,22 +98,28 @@ public class MainServer {
         return "PRIME";
     }
 
-    private List<String> decodeMessage(String strReceived, InetSocketAddress clientAddress) {
+    private List<String> decodeMessage(String strReceived, InetSocketAddress clientAddress, Socket clientConnection) {
         String decryptedText = decryptRailFence(strReceived, (int) sharedSecretKey);
         HashMap<String, String> clientObject = new Gson().fromJson(decryptedText, HashMap.class);
         String clientName = clientObject.get("name");
         coloredPrint(clientName + " ⇒ " + strReceived, BRIGHT_BLACK);
         List<String> list = new ArrayList<>();
         list.add(clientName);
+        coloredPrint(clientObject, BRIGHT_BLACK);
         if (clientObject.get("msg").equals(FIRST_CONNECTION)) {
             userList.put(clientAddress + clientName, new HashMap<>());
             userList.get(clientAddress + clientName).put("name", clientObject.get("name"));
+            textMessagesSent.put(clientAddress + clientName, new HashMap<>());
+            textMessagesSent.get(clientAddress + clientName).put("SERVER", new ArrayList<>());
+            textMessagesReceived.put(clientAddress + clientName, new HashMap<>());
             userList.get(clientAddress + clientName).put("option", "");
             list.add("Joined the server.");
             list.add(clientObject.get("timestamp"));
         } else {
             list.add(clientObject.get("msg"));
             list.add(clientObject.get("timestamp"));
+            list.add(clientObject.get("receiver"));
+            textMessagesSent.get(clientAddress + clientName).get("SERVER").add(clientObject.get("msg"));
         }
         return list;
     }
@@ -161,7 +171,20 @@ public class MainServer {
     public void initiate_client_to_client_message(List<String> list, Socket clientConnection, InetSocketAddress clientAddress) {
         String clientName = list.get(0);
         String clientMsg = list.get(1);
-        System.out.println(clientMsg + clientName + clientAddress);
+        String receiver = list.get(3);
+        if (!textMessagesReceived.containsKey(receiver)) {
+            textMessagesReceived.put(receiver, new HashMap<>());
+        }
+        if (!textMessagesReceived.get(receiver).containsKey(clientName)) {
+            textMessagesReceived.get(receiver).put(clientName, new ArrayList<>());
+        }
+        if (clientMsg.equalsIgnoreCase(GET_RECEIVED_MESSAGES)) {
+            String msgToSend = new Gson().toJson(textMessagesReceived.get(clientAddress + clientName));
+            System.out.println(msgToSend);
+            sendMessage(msgToSend, clientConnection, clientAddress, clientName);
+        } else {
+            textMessagesReceived.get(receiver).get(clientName).add(RED + getTimestamp() + " ⇒ " + RESET + GREEN + clientMsg + RESET);
+        }
     }
 
     private void handleClient(Socket clientConnection, InetSocketAddress clientAddress) {
@@ -205,7 +228,7 @@ public class MainServer {
             try {
                 BufferedReader in = new BufferedReader(new InputStreamReader(clientConnection.getInputStream()));
                 strReceived = in.readLine();
-                List<String> list = decodeMessage(strReceived, clientAddress);
+                List<String> list = decodeMessage(strReceived, clientAddress, clientConnection);
                 clientName = list.get(0);
                 switch (list.get(1)) {
                     case DISCONNECT_MESSAGE -> {
@@ -246,7 +269,6 @@ public class MainServer {
                     }
                 }
                 String option = userList.get(clientAddress + clientName).get("option");
-                System.out.println(option);
                 if (!option.isEmpty()) {
                     switch (option) {
                         case GAME_START -> prime_composite_game(list, clientConnection, clientAddress);
@@ -257,6 +279,7 @@ public class MainServer {
                     }
 
                 }
+                System.out.println(textMessagesReceived);
             } catch (IOException e) {
                 coloredPrint("[UNABLE TO RECEIVE MESSAGE FROM (" + clientName + ")", RED);
                 String current_timestamp = new SimpleDateFormat("HH:mm:ss").format(new Date());

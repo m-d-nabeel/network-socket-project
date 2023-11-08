@@ -34,6 +34,7 @@ public class MainClient {
     private static final String ODD_EVEN = "check_for_odd_even_please";
 
     private static final String CLIENT_TEXT = "initiate_client_message";
+    private static final String GET_RECEIVED_MESSAGES = "get_all_received_messages";
     private static final int PORT = 4000;
     private static final String SERVER = "localhost";
     private final HashMap<String, String> hashMap = new HashMap<>();
@@ -154,6 +155,7 @@ public class MainClient {
                                 index += 1;
                             }
                         }
+                        System.out.println((index == 1 ? "" : "           ") + "Enter ⇒ " + "[get]" + ": " + "Get Received Messages");
                         connected = initiate_client_to_client_message(userChoice);
                     } catch (JsonSyntaxException e) {
                         System.err.println("Error parsing JSON: " + e.getMessage());
@@ -212,14 +214,37 @@ public class MainClient {
         return connected;
     }
 
-    public boolean initiate_client_to_client_message(List<String> userChoice) {
+    public boolean initiate_client_to_client_message(List<String> userChoice) throws IOException {
         boolean connected = true;
         System.out.println(RED + getTimestamp() + " ⇒ " + RESET + BLUE + "Server : " + "Choose the client from the above options " + RESET + BRIGHT_BLACK + "OR type EXIT to leave." + RESET);
         while (true) {
-            String response = input("");
+            String response = input(YELLOW + "Enter your choice\n");
             if (response.equalsIgnoreCase("exit")) {
                 sendMessage(DISCONNECT_MESSAGE);
                 connected = false;
+                break;
+            }
+            if (response.equalsIgnoreCase("get")) {
+                sendMessage(GET_RECEIVED_MESSAGES);
+                String serverMessage = in.readLine();
+                coloredPrint("Server" + " ⇒ " + serverMessage, BRIGHT_BLACK);
+                serverMessage = decryptRailFence(serverMessage, (int) sharedSecretKey);
+                Type userType = new TypeToken<Map<String, List<String>>>() {
+                }.getType();
+                try {
+                    Map<String, List<String>> userList = new Gson().fromJson(serverMessage, userType);
+                    System.out.println(RED + getTimestamp() + " : Received Messages ⇒ " + RESET);
+                    for (Map.Entry<String, List<String>> entry : userList.entrySet()) {
+                        String key = entry.getKey();
+                        List<String> value = entry.getValue();
+                        System.out.println(key + " ↓↓↓ ");
+                        for (String s : value) {
+                            System.out.println("\t\t\t" + s);
+                        }
+                    }
+                } catch (JsonSyntaxException e) {
+                    System.err.println("Error parsing JSON: " + e.getMessage());
+                }
                 break;
             }
             String chosenUser;
@@ -228,8 +253,11 @@ public class MainClient {
                 if (index < 1 || index > userChoice.size()) {
                     System.out.println(RED + "Enter Valid Option.");
                 } else {
-                    chosenUser = userChoice.get(index);
-                    System.out.println(chosenUser);
+                    chosenUser = userChoice.get(index - 1);
+                    String message = input("Enter message you want to send : \n");
+                    String msgToSend = new Gson().toJson(new Message(message, NAME, chosenUser));
+                    String encryptedText = encryptRailFence(msgToSend, (int) sharedSecretKey);
+                    out.println(encryptedText);
                     break;
                 }
             } catch (NumberFormatException e) {
@@ -280,11 +308,21 @@ public class MainClient {
         private final String msg;
         private final String name;
         private final String timestamp;
+        private final String receiver;
+
+        public Message(String msg, String name, String receiver) {
+            this.msg = msg;
+            this.name = name;
+            this.timestamp = getTimestamp();
+            this.receiver = receiver;
+        }
 
         public Message(String msg, String name) {
             this.msg = msg;
             this.name = name;
-            this.timestamp = new SimpleDateFormat("HH:mm:ss").format(new Date());
+            this.timestamp = getTimestamp();
+            this.receiver = "SERVER";
         }
+
     }
 }
