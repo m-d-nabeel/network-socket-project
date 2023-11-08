@@ -25,6 +25,7 @@ public class MainServer {
     private static final String GAME_START = "start_the_game_please";
     private static final String PALINDROME = "check_for_palindrome_please";
     private static final String ODD_EVEN = "check_for_odd_even_please";
+    private static final String CLIENT_TEXT = "initiate_client_message";
     // ANSI escape codes for text colors
     private static final String RESET = "\u001B[0m";
     private static final String RED = "\u001B[31m";
@@ -256,6 +257,12 @@ public class MainServer {
         }
     }
 
+    public void initiate_client_to_client_message(List<String> list, Socket clientConnection, InetSocketAddress clientAddress){
+        String clientName = list.get(0);
+        String clientMsg = list.get(1);
+        sendMessage(GREEN + userList.toString() + RESET, clientConnection, clientAddress, clientName);
+    }
+
     private void handleClient(Socket clientConnection, InetSocketAddress clientAddress) {
         coloredPrint("[NEW CONNECTION] " + clientAddress + " connected.\n", GREEN);
         boolean connected = true;
@@ -325,6 +332,9 @@ public class MainServer {
                         sendMessage(BLUE + "Enter a number to check its [odd/even] nature" + RESET, clientConnection, clientAddress, clientName);
                         continue;
                     }
+                    case CLIENT_TEXT -> {
+                        userList.get(clientAddress + clientName).put("option", CLIENT_TEXT);
+                    }
                     case null, default -> {
                         System.out.print(RED + list.get(2) + " ⇒ " + RESET);
                         System.out.println(BLUE + userList.get(clientAddress + list.get(0)).get("name") + " : " + list.get(1));
@@ -336,6 +346,7 @@ public class MainServer {
                         case GAME_START -> prime_composite_game(list, clientConnection, clientAddress);
                         case PALINDROME -> palindrome_game(list, clientConnection, clientAddress);
                         case ODD_EVEN -> odd_even_game(list, clientConnection, clientAddress);
+                        case CLIENT_TEXT -> initiate_client_to_client_message(list, clientConnection, clientAddress);
                         default -> userList.get(clientAddress + clientName).put("option", "");
                     }
 
@@ -347,7 +358,6 @@ public class MainServer {
                 userList.remove(clientAddress + clientName);
                 break;
             }
-
         }
         userList.remove(clientAddress + clientName);
 

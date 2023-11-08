@@ -27,6 +27,8 @@ public class MainClient {
     private static final String GAME_START = "start_the_game_please";
     private static final String PALINDROME = "check_for_palindrome_please";
     private static final String ODD_EVEN = "check_for_odd_even_please";
+
+    private static final String CLIENT_TEXT = "initiate_client_message";
     private static final int PORT = 4000;
     private static final String SERVER = "localhost";
     private final HashMap<String, String> hashMap = new HashMap<>();
@@ -221,6 +223,19 @@ public class MainClient {
                     receiveMessage();
                     connected = odd_even_game();
                 }
+                case "4" -> {
+                    sendMessage(CLIENT_TEXT);
+                    try {
+                        String serverMessage = in.readLine();
+                        coloredPrint("Server" + " ⇒ " + serverMessage, BRIGHT_BLACK);
+                        serverMessage = decryptRailFence(serverMessage, (int) sharedSecretKey);
+                        String current_timestamp = new SimpleDateFormat("HH:mm:ss").format(new Date());
+                        System.out.println(RED + current_timestamp + " ⇒ " + RESET + BLUE + "Server : " + "Choose the client from the below options :");
+                        System.out.println(RED + current_timestamp + " ⇒ " + RESET + BLUE + "Server : " + serverMessage);
+                    } catch (IOException e) {
+                        coloredPrint("[UNABLE TO RECEIVE MESSAGE FROM THE SERVER]: " + e.getMessage(), RED);
+                    }
+                }
                 default -> coloredPrint("Enter a VALID option from set {0, 1, 2, 3}", RED);
             }
         }
@@ -278,6 +293,8 @@ public class MainClient {
         coloredPrint("1. Play [Prime/Composite] guessing game.", YELLOW);
         coloredPrint("2. Enter a number and check its Palindrome nature.", YELLOW);
         coloredPrint("3. Enter a number and check its [Even/Odd] nature.", YELLOW);
+        coloredPrint("4. Select a client to proceed.", YELLOW);
+        coloredPrint("5. Enter a word to search in past messages", YELLOW);
         coloredPrint("0. Exit.\n", YELLOW);
     }
 
