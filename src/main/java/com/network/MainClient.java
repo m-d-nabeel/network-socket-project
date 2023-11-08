@@ -1,16 +1,21 @@
 package com.network;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.reflect.Type;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
+import java.util.*;
+
+import static com.network.Encryption.decryptRailFence;
+import static com.network.Encryption.encryptRailFence;
+import static com.network.UtilFunctions.getTimestamp;
 
 
 public class MainClient {
@@ -73,102 +78,6 @@ public class MainClient {
         return "";
     }
 
-    public static String encryptRailFence(String text, int key) {
-
-        char[][] rail = new char[key][text.length()];
-        // filling the rail matrix to distinguish filled
-        // spaces from blank ones
-        for (int i = 0; i < key; i++)
-            Arrays.fill(rail[i], '\n');
-
-        boolean dirDown = false;
-        int row = 0, col = 0;
-
-        for (int i = 0; i < text.length(); i++) {
-            // check the direction of flow
-            // reverse the direction if we've just
-            // filled the top or bottom rail
-            if (row == 0 || row == key - 1) dirDown = !dirDown;
-
-            // fill the corresponding alphabet
-            rail[row][col++] = text.charAt(i);
-
-            // find the next row using direction flag
-            if (dirDown) row++;
-            else row--;
-        }
-
-        // now we can construct the cipher using the rail
-        // matrix
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < key; i++) {
-            for (int j = 0; j < text.length(); j++) {
-                if (rail[i][j] != '\n') {
-                    result.append(rail[i][j]);
-                }
-            }
-        }
-        return result.toString();
-    }
-
-    public static String decryptRailFence(String cipher, int key) {
-        // create the matrix to cipher plain text
-        // key = rows , length(text) = columns
-        char[][] rail = new char[key][cipher.length()];
-
-        // filling the rail matrix to distinguish filled
-        // spaces from blank ones
-        for (int i = 0; i < key; i++) {
-            Arrays.fill(rail[i], '\n');
-        }
-
-        // to find the direction
-        boolean dirDown = true;
-
-        int row = 0, col = 0;
-
-        // mark the places with '*'
-        for (int i = 0; i < cipher.length(); i++) {
-            // check the direction of flow
-            if (row == 0) dirDown = true;
-            if (row == key - 1) dirDown = false;
-
-            // place the marker
-            rail[row][col++] = '*';
-
-            // find the next row using direction flag
-            if (dirDown) row++;
-            else row--;
-        }
-
-        // now we can construct the fill the rail matrix
-        int index = 0;
-        for (int i = 0; i < key; i++) {
-            for (int j = 0; j < cipher.length(); j++) {
-                if (rail[i][j] == '*' && index < cipher.length()) {
-                    rail[i][j] = cipher.charAt(index++);
-                }
-            }
-        }
-        StringBuilder result = new StringBuilder();
-
-        row = 0;
-        col = 0;
-        for (int i = 0; i < cipher.length(); i++) {
-            // check the direction of flow
-            if (row == 0) dirDown = true;
-            if (row == key - 1) dirDown = false;
-
-            // place the marker
-            if (rail[row][col] != '*') result.append(rail[row][col++]);
-
-            // find the next row using direction flag
-            if (dirDown) row++;
-            else row--;
-        }
-        return result.toString();
-    }
-
     private long power(long a, long b, long P) {
         if (b == 1) return a;
         return (long) (Math.pow(a, b) % P);
@@ -225,15 +134,29 @@ public class MainClient {
                 }
                 case "4" -> {
                     sendMessage(CLIENT_TEXT);
+                    String serverMessage = in.readLine();
+                    coloredPrint("Server" + " ⇒ " + serverMessage, BRIGHT_BLACK);
+                    serverMessage = decryptRailFence(serverMessage, (int) sharedSecretKey);
+                    Type userType = new TypeToken<Map<String, Map<String, String>>>() {
+                    }.getType();
                     try {
-                        String serverMessage = in.readLine();
-                        coloredPrint("Server" + " ⇒ " + serverMessage, BRIGHT_BLACK);
-                        serverMessage = decryptRailFence(serverMessage, (int) sharedSecretKey);
-                        String current_timestamp = new SimpleDateFormat("HH:mm:ss").format(new Date());
-                        System.out.println(RED + current_timestamp + " ⇒ " + RESET + BLUE + "Server : " + "Choose the client from the below options :");
-                        System.out.println(RED + current_timestamp + " ⇒ " + RESET + BLUE + "Server : " + serverMessage);
-                    } catch (IOException e) {
-                        coloredPrint("[UNABLE TO RECEIVE MESSAGE FROM THE SERVER]: " + e.getMessage(), RED);
+                        Map<String, Map<Object, Object>> userList = new Gson().fromJson(serverMessage, userType);
+                        System.out.print(RED + getTimestamp() + " ⇒ " + RESET);
+                        List<String> userChoice = new ArrayList<>();
+                        int index = 1;
+                        for (Map.Entry<String, Map<Object, Object>> entry : userList.entrySet()) {
+                            String key = entry.getKey();
+                            Map<Object, Object> value = entry.getValue();
+                            Object name = value.get("name");
+                            if (name != null) {
+                                userChoice.add(key);
+                                System.out.println((index == 1 ? "" : "           ") + "Enter ⇒ " + index + ": " + name);
+                                index += 1;
+                            }
+                        }
+                        connected = initiate_client_to_client_message(userChoice);
+                    } catch (JsonSyntaxException e) {
+                        System.err.println("Error parsing JSON: " + e.getMessage());
                     }
                 }
                 default -> coloredPrint("Enter a VALID option from set {0, 1, 2, 3}", RED);
@@ -285,6 +208,33 @@ public class MainClient {
         if (input(BRIGHT_BLACK + "Enter EXIT to exit the game or press ENTER to continue." + RESET).equalsIgnoreCase("exit")) {
             sendMessage(DISCONNECT_MESSAGE);
             connected = false;
+        }
+        return connected;
+    }
+
+    public boolean initiate_client_to_client_message(List<String> userChoice) {
+        boolean connected = true;
+        System.out.println(RED + getTimestamp() + " ⇒ " + RESET + BLUE + "Server : " + "Choose the client from the above options " + RESET + BRIGHT_BLACK + "OR type EXIT to leave." + RESET);
+        while (true) {
+            String response = input("");
+            if (response.equalsIgnoreCase("exit")) {
+                sendMessage(DISCONNECT_MESSAGE);
+                connected = false;
+                break;
+            }
+            String chosenUser;
+            try {
+                int index = Integer.parseInt(response);
+                if (index < 1 || index > userChoice.size()) {
+                    System.out.println(RED + "Enter Valid Option.");
+                } else {
+                    chosenUser = userChoice.get(index);
+                    System.out.println(chosenUser);
+                    break;
+                }
+            } catch (NumberFormatException e) {
+                System.err.println("Error: Input is not a valid integer.");
+            }
         }
         return connected;
     }

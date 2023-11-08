@@ -12,6 +12,9 @@ import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import static com.network.Encryption.decryptRailFence;
+import static com.network.Encryption.encryptRailFence;
+
 public class MainServer {
 
     //    KEYS
@@ -33,114 +36,12 @@ public class MainServer {
     private static final String YELLOW = "\u001B[33m";
     private static final String BLUE = "\u001B[34m";
     private static final String BRIGHT_BLACK = "\u001B[90m";
-    private final Map<String, HashMap<Object, Object>> userList = new HashMap<>();
+    private final Map<String, Map<String, String>> userList = new HashMap<>();
     private long sharedSecretKey;
 
     public static void main(String[] args) {
         MainServer server = new MainServer();
         server.start();
-    }
-
-    public static String encryptRailFence(String text, int key) {
-
-        // create the matrix to cipher plain text
-        // key = rows , length(text) = columns
-        char[][] rail = new char[key][text.length()];
-
-        // filling the rail matrix to distinguish filled
-        // spaces from blank ones
-        for (int i = 0; i < key; i++)
-            Arrays.fill(rail[i], '\n');
-
-        boolean dirDown = false;
-        int row = 0, col = 0;
-
-        for (int i = 0; i < text.length(); i++) {
-
-            // check the direction of flow
-            // reverse the direction if we've just
-            // filled the top or bottom rail
-            if (row == 0 || row == key - 1) dirDown = !dirDown;
-
-            // fill the corresponding alphabet
-            rail[row][col++] = text.charAt(i);
-
-            // find the next row using direction flag
-            if (dirDown) row++;
-            else row--;
-        }
-
-        // now we can construct the cipher using the rail
-        // matrix
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < key; i++) {
-            for (int j = 0; j < text.length(); j++) {
-                if (rail[i][j] != '\n') {
-                    result.append(rail[i][j]);
-                }
-            }
-        }
-        return result.toString();
-    }
-
-    // This function receives cipher-text and key
-    // and returns the original text after decryption
-    public static String decryptRailFence(String cipher, int key) {
-        // create the matrix to cipher plain text
-        // key = rows , length(text) = columns
-        char[][] rail = new char[key][cipher.length()];
-
-        // filling the rail matrix to distinguish filled
-        // spaces from blank ones
-        for (int i = 0; i < key; i++) {
-            Arrays.fill(rail[i], '\n');
-        }
-
-        // to find the direction
-        boolean dirDown = true;
-
-        int row = 0, col = 0;
-
-        // mark the places with '*'
-        for (int i = 0; i < cipher.length(); i++) {
-            // check the direction of flow
-            if (row == 0) dirDown = true;
-            if (row == key - 1) dirDown = false;
-
-            // place the marker
-            rail[row][col++] = '*';
-
-            // find the next row using direction flag
-            if (dirDown) row++;
-            else row--;
-        }
-
-        // now we can construct the fill the rail matrix
-        int index = 0;
-        for (int i = 0; i < key; i++) {
-            for (int j = 0; j < cipher.length(); j++) {
-                if (rail[i][j] == '*' && index < cipher.length()) {
-                    rail[i][j] = cipher.charAt(index++);
-                }
-            }
-        }
-        StringBuilder result = new StringBuilder();
-
-        row = 0;
-        col = 0;
-        for (int i = 0; i < cipher.length(); i++) {
-            // check the direction of flow
-            if (row == 0) dirDown = true;
-            if (row == key - 1) dirDown = false;
-
-            // place the marker
-            if (rail[row][col] != '*') result.append(rail[row][col++]);
-
-            // find the next row using direction flag
-            if (dirDown) row++;
-            else row--;
-        }
-        return result.toString();
     }
 
     private long power(long a, long b, long P) {
@@ -257,10 +158,10 @@ public class MainServer {
         }
     }
 
-    public void initiate_client_to_client_message(List<String> list, Socket clientConnection, InetSocketAddress clientAddress){
+    public void initiate_client_to_client_message(List<String> list, Socket clientConnection, InetSocketAddress clientAddress) {
         String clientName = list.get(0);
         String clientMsg = list.get(1);
-        sendMessage(GREEN + userList.toString() + RESET, clientConnection, clientAddress, clientName);
+        System.out.println(clientMsg + clientName + clientAddress);
     }
 
     private void handleClient(Socket clientConnection, InetSocketAddress clientAddress) {
@@ -334,13 +235,18 @@ public class MainServer {
                     }
                     case CLIENT_TEXT -> {
                         userList.get(clientAddress + clientName).put("option", CLIENT_TEXT);
+                        Gson gson = new Gson();
+                        String json = gson.toJson(userList);
+                        sendMessage(json, clientConnection, clientAddress, clientName);
+                        continue;
                     }
                     case null, default -> {
                         System.out.print(RED + list.get(2) + " ⇒ " + RESET);
                         System.out.println(BLUE + userList.get(clientAddress + list.get(0)).get("name") + " : " + list.get(1));
                     }
                 }
-                String option = userList.get(clientAddress + clientName).get("option").toString();
+                String option = userList.get(clientAddress + clientName).get("option");
+                System.out.println(option);
                 if (!option.isEmpty()) {
                     switch (option) {
                         case GAME_START -> prime_composite_game(list, clientConnection, clientAddress);
