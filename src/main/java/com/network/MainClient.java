@@ -35,6 +35,7 @@ public class MainClient {
 
     private static final String CLIENT_TEXT = "initiate_client_message";
     private static final String GET_RECEIVED_MESSAGES = "get_all_received_messages";
+    private static final String GET_PREVIOUS_MESSAGE = "get_previous_messages";
     private static final int PORT = 4000;
     private static final String SERVER = "localhost";
     private final HashMap<String, String> hashMap = new HashMap<>();
@@ -134,31 +135,10 @@ public class MainClient {
                     connected = odd_even_game();
                 }
                 case "4" -> {
-                    sendMessage(CLIENT_TEXT);
-                    String serverMessage = in.readLine();
-                    coloredPrint("Server" + " ⇒ " + serverMessage, BRIGHT_BLACK);
-                    serverMessage = decryptRailFence(serverMessage, (int) sharedSecretKey);
-                    Type userType = new TypeToken<Map<String, Map<String, String>>>() {
-                    }.getType();
-                    try {
-                        Map<String, Map<Object, Object>> userList = new Gson().fromJson(serverMessage, userType);
-                        System.out.print(RED + getTimestamp() + " ⇒ " + RESET);
-                        List<String> userChoice = new ArrayList<>();
-                        int index = 1;
-                        for (Map.Entry<String, Map<Object, Object>> entry : userList.entrySet()) {
-                            String key = entry.getKey();
-                            Map<Object, Object> value = entry.getValue();
-                            Object name = value.get("name");
-                            if (name != null) {
-                                userChoice.add(key);
-                                System.out.println((index == 1 ? "" : "           ") + "Enter ⇒ " + index + ": " + name);
-                                index += 1;
-                            }
-                        }
-                        System.out.println((index == 1 ? "" : "           ") + "Enter ⇒ " + "[get]" + ": " + "Get Received Messages");
-                        connected = initiate_client_to_client_message(userChoice);
-                    } catch (JsonSyntaxException e) {
-                        System.err.println("Error parsing JSON: " + e.getMessage());
+                    connected = client_to_client(connected);
+                    if (connected) {
+                        System.out.println("           " + "Enter ⇒ " + "[get]" + ": " + "Get Received Messages");
+                        System.out.println("           " + "Enter ⇒ " + "[getPrev]" + ": " + "Send Previous Message to other client");
                     }
                 }
                 default -> coloredPrint("Enter a VALID option from set {0, 1, 2, 3}", RED);
@@ -167,6 +147,76 @@ public class MainClient {
         coloredPrint("Connection Closed!", RED);
         closeClientConnection();
         System.exit(0);
+    }
+
+    public boolean client_to_client(boolean connected) throws IOException {
+        sendMessage(CLIENT_TEXT);
+        String serverMessage = in.readLine();
+        coloredPrint("Server" + " ⇒ " + serverMessage, BRIGHT_BLACK);
+        serverMessage = decryptRailFence(serverMessage, (int) sharedSecretKey);
+        Type userType = new TypeToken<Map<String, Map<String, String>>>() {
+        }.getType();
+        try {
+            Map<String, Map<Object, Object>> userList = new Gson().fromJson(serverMessage, userType);
+            System.out.print(RED + getTimestamp() + " ⇒ " + RESET);
+            List<String> userChoice = new ArrayList<>();
+            int index = 1;
+            for (Map.Entry<String, Map<Object, Object>> entry : userList.entrySet()) {
+                String key = entry.getKey();
+                Map<Object, Object> value = entry.getValue();
+                Object name = value.get("name");
+                if (name != null) {
+                    userChoice.add(key);
+                    System.out.println((index == 1 ? "" : "           ") + "Enter ⇒ " + index + ": " + name);
+                    index += 1;
+                }
+            }
+            connected = initiate_client_to_client_message(userChoice);
+        } catch (JsonSyntaxException e) {
+            System.err.println("Error parsing JSON: " + e.getMessage());
+        }
+        return connected;
+    }
+
+    public boolean client_to_client_modified(boolean connected, String modifiedMsg) throws IOException {
+        sendMessage(CLIENT_TEXT);
+        String serverMessage = in.readLine();
+        coloredPrint("Server" + " ⇒ " + serverMessage, BRIGHT_BLACK);
+        serverMessage = decryptRailFence(serverMessage, (int) sharedSecretKey);
+        Type userType = new TypeToken<Map<String, Map<String, String>>>() {
+        }.getType();
+        try {
+            Map<String, Map<Object, Object>> userList = new Gson().fromJson(serverMessage, userType);
+            System.out.print(RED + getTimestamp() + " ⇒ " + RESET);
+            List<String> userChoice = new ArrayList<>();
+            int index = 1;
+            for (Map.Entry<String, Map<Object, Object>> entry : userList.entrySet()) {
+                String key = entry.getKey();
+                Map<Object, Object> value = entry.getValue();
+                Object name = value.get("name");
+                if (name != null) {
+                    userChoice.add(key);
+                    System.out.println((index == 1 ? "" : "           ") + "Enter ⇒ " + index + ": " + name);
+                    index += 1;
+                }
+            }
+            while (true) {
+                try {
+                    String choice = input("Choose one from above.");
+                    int idx = Integer.parseInt(choice);
+                    String msgToSend = new Gson().toJson(new Message(modifiedMsg, NAME, userChoice.get(idx - 1)));
+                    String encryptedText = encryptRailFence(msgToSend, (int) sharedSecretKey);
+                    out.println(encryptedText);
+                    break;
+                } catch (NumberFormatException ignored) {
+                    System.out.println(RED + "Wrong input");
+                }
+            }
+            return connected;
+        } catch (JsonSyntaxException e) {
+            System.err.println("Error parsing JSON: " + e.getMessage());
+        }
+        return connected;
     }
 
     public boolean prime_composite_game() {
@@ -246,6 +296,19 @@ public class MainClient {
                     System.err.println("Error parsing JSON: " + e.getMessage());
                 }
                 break;
+            } else if (response.equalsIgnoreCase("getPrev")) {
+                sendMessage(GET_PREVIOUS_MESSAGE);
+                String received = receiveMessage();
+                if (received.contains("No Previous Messages")) {
+                    break;
+                }
+                String wordTrack = input("Enter [old_word] [new_word] : ");
+                String[] words = wordTrack.split(" ");
+                received = received.replace(words[0], words[1]);
+                System.out.println(received);
+                connected = client_to_client_modified(connected, received);
+                if (!connected) break;
+                break;
             }
             String chosenUser;
             try {
@@ -282,16 +345,18 @@ public class MainClient {
         out.println(encryptedText);
     }
 
-    public void receiveMessage() {
+    public String receiveMessage() {
         try {
             String serverMessage = in.readLine();
             coloredPrint("Server" + " ⇒ " + serverMessage, BRIGHT_BLACK);
             serverMessage = decryptRailFence(serverMessage, (int) sharedSecretKey);
             String current_timestamp = new SimpleDateFormat("HH:mm:ss").format(new Date());
             System.out.println(RED + current_timestamp + " ⇒ " + RESET + BLUE + "Server : " + serverMessage);
+            return serverMessage;
         } catch (IOException e) {
             coloredPrint("[UNABLE TO RECEIVE MESSAGE FROM THE SERVER]: " + e.getMessage(), RED);
         }
+        return "";
     }
 
     public void closeClientConnection() {

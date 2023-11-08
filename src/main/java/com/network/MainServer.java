@@ -31,6 +31,9 @@ public class MainServer {
     private static final String ODD_EVEN = "check_for_odd_even_please";
     private static final String CLIENT_TEXT = "initiate_client_message";
     private static final String GET_RECEIVED_MESSAGES = "get_all_received_messages";
+    private static final String GET_PREVIOUS_MESSAGE = "get_previous_messages";
+
+
     // ANSI escape codes for text colors
     private static final String RESET = "\u001B[0m";
     private static final String RED = "\u001B[31m";
@@ -41,6 +44,7 @@ public class MainServer {
     private final Map<String, Map<String, List<String>>> textMessagesSent = new HashMap<>();
     private final Map<String, Map<String, List<String>>> textMessagesReceived = new HashMap<>();
     private final Map<String, Map<String, String>> userList = new HashMap<>();
+    private final Map<String, String> previousSentMessage = new HashMap<>();
     private long sharedSecretKey;
 
     public static void main(String[] args) {
@@ -182,8 +186,11 @@ public class MainServer {
             String msgToSend = new Gson().toJson(textMessagesReceived.get(clientAddress + clientName));
             System.out.println(msgToSend);
             sendMessage(msgToSend, clientConnection, clientAddress, clientName);
+        } else if (clientMsg.equalsIgnoreCase(GET_PREVIOUS_MESSAGE)) {
+            sendMessage(previousSentMessage.getOrDefault(clientAddress + clientName, RED + "No Previous Messages" + RESET), clientConnection, clientAddress, clientName);
         } else {
             textMessagesReceived.get(receiver).get(clientName).add(RED + getTimestamp() + " ⇒ " + RESET + GREEN + clientMsg + RESET);
+            previousSentMessage.put(clientAddress + clientName, clientMsg);
         }
     }
 
@@ -193,7 +200,6 @@ public class MainServer {
         String clientName = "Unknown User";
         // Initial Connection
         String keyObjectMsg = new Gson().toJson(new KeyExchangeData(G, P), KeyExchangeData.class);
-
         // Sending Unencrypted Data
         try {
             PrintWriter out = new PrintWriter(clientConnection.getOutputStream(), true);
