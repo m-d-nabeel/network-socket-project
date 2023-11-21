@@ -36,6 +36,7 @@ public class MainClient {
     private static final String CLIENT_TEXT = "initiate_client_message";
     private static final String GET_RECEIVED_MESSAGES = "get_all_received_messages";
     private static final String GET_PREVIOUS_MESSAGE = "get_previous_messages";
+    private static final String FIND_IN_MESSAGES = "get_messages_with_word";
     private static final int PORT = 4000;
     private static final String SERVER = "localhost";
     private final HashMap<String, String> hashMap = new HashMap<>();
@@ -115,38 +116,75 @@ public class MainClient {
             printOptions();
             msg = input(BRIGHT_BLACK + "Choose one of the stated option : " + RESET);
             switch (msg) {
-                case "0" -> {
+                case "0": {
                     sendMessage(DISCONNECT_MESSAGE);
                     connected = false;
+                    break;
                 }
-                case "1" -> {
+                case "1": {
                     sendMessage(GAME_START);
                     receiveMessage();
                     connected = prime_composite_game();
+                    break;
                 }
-                case "2" -> {
+                case "2": {
                     sendMessage(PALINDROME);
                     receiveMessage();
                     connected = palindrome_game();
+                    break;
                 }
-                case "3" -> {
+                case "3": {
                     sendMessage(ODD_EVEN);
                     receiveMessage();
                     connected = odd_even_game();
+                    break;
                 }
-                case "4" -> {
+                case "4": {
                     connected = client_to_client(connected);
-                    if (connected) {
-                        System.out.println("           " + "Enter ⇒ " + "[get]" + ": " + "Get Received Messages");
-                        System.out.println("           " + "Enter ⇒ " + "[getPrev]" + ": " + "Send Previous Message to other client");
-                    }
+                    break;
                 }
-                default -> coloredPrint("Enter a VALID option from set {0, 1, 2, 3}", RED);
+                case "5": {
+                    connected = find_messages_with_matching_word(connected);
+                    break;
+                }
+                default:
+                    coloredPrint("Enter a VALID option from set {0..5}", RED);
             }
         }
         coloredPrint("Connection Closed!", RED);
         closeClientConnection();
         System.exit(0);
+    }
+
+    public boolean find_messages_with_matching_word(boolean connected) throws IOException {
+        sendMessage(FIND_IN_MESSAGES);
+        String response = input(YELLOW + "Enter a word to initiate search.\n" + RESET + BRIGHT_BLACK + "Or Enter EXIT to leave." + RESET);
+        if (response.equalsIgnoreCase("exit")) {
+            sendMessage(DISCONNECT_MESSAGE);
+            connected = false;
+        }
+        if (!connected) {
+            return connected;
+        }
+        sendMessage(response);
+        String serverMessage = in.readLine();
+        coloredPrint("Server" + " ⇒ " + serverMessage, BRIGHT_BLACK);
+        serverMessage = decryptRailFence(serverMessage, (int) sharedSecretKey);
+        Type userType = new TypeToken<List<String>>() {
+        }.getType();
+        try {
+            List<String> messages = new Gson().fromJson(serverMessage, userType);
+            System.out.println(RED + getTimestamp() + " : Matching result ⇒ " + RESET);
+            if (messages == null) {
+                return connected;
+            }
+            for (String message : messages) {
+                System.out.println("\t\t\t" + message);
+            }
+        } catch (JsonSyntaxException e) {
+            System.err.println("Error parsing JSON: " + e.getMessage());
+        }
+        return connected;
     }
 
     public boolean client_to_client(boolean connected) throws IOException {
@@ -171,6 +209,8 @@ public class MainClient {
                     index += 1;
                 }
             }
+            System.out.println("           " + "Enter ⇒ " + "[get]" + ": " + "Get Received Messages");
+            System.out.println("           " + "Enter ⇒ " + "[getPrev]" + ": " + "Send Previous Message to other client");
             connected = initiate_client_to_client_message(userChoice);
         } catch (JsonSyntaxException e) {
             System.err.println("Error parsing JSON: " + e.getMessage());
@@ -330,6 +370,7 @@ public class MainClient {
         return connected;
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////
     public void printOptions() {
         coloredPrint("1. Play [Prime/Composite] guessing game.", YELLOW);
         coloredPrint("2. Enter a number and check its Palindrome nature.", YELLOW);

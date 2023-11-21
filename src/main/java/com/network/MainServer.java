@@ -14,6 +14,7 @@ import java.util.*;
 
 import static com.network.Encryption.decryptRailFence;
 import static com.network.Encryption.encryptRailFence;
+import static com.network.OffensiveWords.righteous_word;
 import static com.network.UtilFunctions.getTimestamp;
 
 public class MainServer {
@@ -32,6 +33,7 @@ public class MainServer {
     private static final String CLIENT_TEXT = "initiate_client_message";
     private static final String GET_RECEIVED_MESSAGES = "get_all_received_messages";
     private static final String GET_PREVIOUS_MESSAGE = "get_previous_messages";
+    private static final String FIND_IN_MESSAGES = "get_messages_with_word";
 
 
     // ANSI escape codes for text colors
@@ -184,15 +186,45 @@ public class MainServer {
         }
         if (clientMsg.equalsIgnoreCase(GET_RECEIVED_MESSAGES)) {
             String msgToSend = new Gson().toJson(textMessagesReceived.get(clientAddress + clientName));
-            System.out.println(msgToSend);
             sendMessage(msgToSend, clientConnection, clientAddress, clientName);
         } else if (clientMsg.equalsIgnoreCase(GET_PREVIOUS_MESSAGE)) {
             sendMessage(previousSentMessage.getOrDefault(clientAddress + clientName, RED + "No Previous Messages" + RESET), clientConnection, clientAddress, clientName);
         } else {
-            textMessagesReceived.get(receiver).get(clientName).add(RED + getTimestamp() + " ⇒ " + RESET + GREEN + clientMsg + RESET);
+            String cliMsg = String.valueOf(righteous_word(clientMsg));
+            textMessagesReceived.get(receiver).get(clientName).add(RED + getTimestamp() + " ⇒ " + RESET + GREEN + cliMsg + RESET);
             previousSentMessage.put(clientAddress + clientName, clientMsg);
         }
     }
+
+    public void find_messages_with_matching_word(List<String> list, Socket clientConnection, InetSocketAddress clientAddress) {
+        String clientName = list.get(0);
+        String clientMsg = list.get(1);
+
+        Map<String, List<String>> matchingMessages = new HashMap<>();
+        String keyToFind = clientAddress + clientName;
+
+        Map<String, List<String>> messages = textMessagesSent.get(keyToFind);
+        if (messages != null) {
+            for (Map.Entry<String, List<String>> entry : messages.entrySet()) {
+                List<String> messageList = entry.getValue();
+                List<String> matchingStrings = new ArrayList<>();
+
+                for (String message : messageList) {
+                    if (message.contains(clientMsg)) {
+                        matchingStrings.add(message);
+                    }
+                }
+
+                if (!matchingStrings.isEmpty()) {
+                    matchingMessages.put(entry.getKey(), matchingStrings);
+                }
+            }
+        }
+        String msgToSend = new Gson().toJson(matchingMessages.get("SERVER"));
+        System.out.println(msgToSend);
+        sendMessage(msgToSend, clientConnection, clientAddress, clientName);
+    }
+
 
     private void handleClient(Socket clientConnection, InetSocketAddress clientAddress) {
         coloredPrint("[NEW CONNECTION] " + clientAddress + " connected.\n", GREEN);
@@ -269,6 +301,10 @@ public class MainServer {
                         sendMessage(json, clientConnection, clientAddress, clientName);
                         continue;
                     }
+                    case FIND_IN_MESSAGES -> {
+                        userList.get(clientAddress + clientName).put("option", FIND_IN_MESSAGES);
+                        continue;
+                    }
                     case null, default -> {
                         System.out.print(RED + list.get(2) + " ⇒ " + RESET);
                         System.out.println(BLUE + userList.get(clientAddress + list.get(0)).get("name") + " : " + list.get(1));
@@ -281,11 +317,13 @@ public class MainServer {
                         case PALINDROME -> palindrome_game(list, clientConnection, clientAddress);
                         case ODD_EVEN -> odd_even_game(list, clientConnection, clientAddress);
                         case CLIENT_TEXT -> initiate_client_to_client_message(list, clientConnection, clientAddress);
+                        case FIND_IN_MESSAGES ->
+                                find_messages_with_matching_word(list, clientConnection, clientAddress);
                         default -> userList.get(clientAddress + clientName).put("option", "");
                     }
 
                 }
-                System.out.println(textMessagesReceived);
+                System.out.println(textMessagesSent);
             } catch (IOException e) {
                 coloredPrint("[UNABLE TO RECEIVE MESSAGE FROM (" + clientName + ")", RED);
                 String current_timestamp = new SimpleDateFormat("HH:mm:ss").format(new Date());
