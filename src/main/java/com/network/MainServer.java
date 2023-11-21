@@ -210,7 +210,7 @@ public class MainServer {
                 List<String> matchingStrings = new ArrayList<>();
 
                 for (String message : messageList) {
-                    if (message.contains(clientMsg)) {
+                    if (message.toLowerCase().contains(clientMsg.toLowerCase())) {
                         matchingStrings.add(message);
                     }
                 }
@@ -305,7 +305,7 @@ public class MainServer {
                         userList.get(clientAddress + clientName).put("option", FIND_IN_MESSAGES);
                         continue;
                     }
-                    case null, default -> {
+                    default -> {
                         System.out.print(RED + list.get(2) + " ⇒ " + RESET);
                         System.out.println(BLUE + userList.get(clientAddress + list.get(0)).get("name") + " : " + list.get(1));
                     }
