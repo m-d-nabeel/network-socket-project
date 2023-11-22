@@ -9,6 +9,10 @@ import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -19,7 +23,7 @@ import static com.network.UtilFunctions.getTimestamp;
 
 public class MainServer {
 
-    //    KEYS
+    // KEYS
     private static final long P = 23; // (Same for both server and client)
     private static final long G = 9; // (Same for both server and client)
     private static final long serverPrivateKey = 4;
@@ -35,7 +39,6 @@ public class MainServer {
     private static final String GET_PREVIOUS_MESSAGE = "get_previous_messages";
     private static final String FIND_IN_MESSAGES = "get_messages_with_word";
 
-
     // ANSI escape codes for text colors
     private static final String RESET = "\u001B[0m";
     private static final String RED = "\u001B[31m";
@@ -49,23 +52,29 @@ public class MainServer {
     private final Map<String, String> previousSentMessage = new HashMap<>();
     private long sharedSecretKey;
 
+    public static final Path path = Paths.get("database.txt");
+
     public static void main(String[] args) {
         MainServer server = new MainServer();
         server.start();
     }
 
     private long power(long a, long b, long P) {
-        if (b == 1) return a;
+        if (b == 1)
+            return a;
         return (long) (Math.pow(a, b) % P);
     }
 
     public void start() {
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            coloredPrint("Server is running on Local Socket Address = " + RED + serverSocket.getLocalSocketAddress() + RESET, GREEN);
+            coloredPrint(
+                    "Server is running on Local Socket Address = " + RED + serverSocket.getLocalSocketAddress() + RESET,
+                    GREEN);
             while (true) {
                 try {
                     Socket clientConnection = serverSocket.accept();
-                    Thread thread = new Thread(() -> handleClient(clientConnection, new InetSocketAddress(SERVER, PORT)));
+                    Thread thread = new Thread(
+                            () -> handleClient(clientConnection, new InetSocketAddress(SERVER, PORT)));
                     thread.start();
                     coloredPrint("[NEW CONNECTION] " + clientConnection.getInetAddress() + " connected.\n", GREEN);
                     coloredPrint("[ACTIVE CONNECTIONS] " + (Thread.activeCount() - 2) + "\n", YELLOW);
@@ -90,16 +99,19 @@ public class MainServer {
             String encrypted_text = encryptRailFence(msg, (int) sharedSecretKey);
             out.println(encrypted_text);
         } catch (IOException e) {
-            coloredPrint("[UNABLE TO SEND MESSAGE TO " + userList.get(clientAddress + clientName).get("name") + "]: " + e.getMessage() + "...\n", RED);
+            coloredPrint("[UNABLE TO SEND MESSAGE TO " + userList.get(clientAddress + clientName).get("name") + "]: "
+                    + e.getMessage() + "...\n", RED);
             userList.remove(clientAddress + clientName);
             System.exit(0);
         }
     }
 
     private String is_prime(long number) {
-        if (number < 2) return "COMPOSITE";
+        if (number < 2)
+            return "COMPOSITE";
         for (int i = 2; i < Math.sqrt(number) + 1; i++) {
-            if (number % i == 0) return "COMPOSITE";
+            if (number % i == 0)
+                return "COMPOSITE";
         }
         return "PRIME";
     }
@@ -112,6 +124,11 @@ public class MainServer {
         List<String> list = new ArrayList<>();
         list.add(clientName);
         coloredPrint(clientObject, BRIGHT_BLACK);
+        try {
+            Files.write(path, (decryptedText + "\n").getBytes(), StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         if (clientObject.get("msg").equals(FIRST_CONNECTION)) {
             userList.put(clientAddress + clientName, new HashMap<>());
             userList.get(clientAddress + clientName).put("name", clientObject.get("name"));
@@ -130,7 +147,7 @@ public class MainServer {
         return list;
     }
 
-    //    GAME LOGICS
+    // GAME LOGICS
     public void prime_composite_game(List<String> list, Socket clientConnection, InetSocketAddress clientAddress) {
         String clientName = list.get(0);
         String clientMsg = list.get(1);
@@ -152,9 +169,11 @@ public class MainServer {
             }
         }
         if (isPalindrome) {
-            sendMessage(GREEN + "Your input is a Palindrome!!! (/≧▽≦)/" + RESET, clientConnection, clientAddress, clientName);
+            sendMessage(GREEN + "Your input is a Palindrome!!! (/≧▽≦)/" + RESET, clientConnection, clientAddress,
+                    clientName);
         } else {
-            sendMessage(RED + "Your input is not a Palindrome. (´。＿。｀)" + RESET, clientConnection, clientAddress, clientName);
+            sendMessage(RED + "Your input is not a Palindrome. (´。＿。｀)" + RESET, clientConnection, clientAddress,
+                    clientName);
         }
     }
 
@@ -174,7 +193,8 @@ public class MainServer {
         }
     }
 
-    public void initiate_client_to_client_message(List<String> list, Socket clientConnection, InetSocketAddress clientAddress) {
+    public void initiate_client_to_client_message(List<String> list, Socket clientConnection,
+            InetSocketAddress clientAddress) {
         String clientName = list.get(0);
         String clientMsg = list.get(1);
         String receiver = list.get(3);
@@ -188,15 +208,19 @@ public class MainServer {
             String msgToSend = new Gson().toJson(textMessagesReceived.get(clientAddress + clientName));
             sendMessage(msgToSend, clientConnection, clientAddress, clientName);
         } else if (clientMsg.equalsIgnoreCase(GET_PREVIOUS_MESSAGE)) {
-            sendMessage(previousSentMessage.getOrDefault(clientAddress + clientName, RED + "No Previous Messages" + RESET), clientConnection, clientAddress, clientName);
+            sendMessage(
+                    previousSentMessage.getOrDefault(clientAddress + clientName, RED + "No Previous Messages" + RESET),
+                    clientConnection, clientAddress, clientName);
         } else {
             String cliMsg = String.valueOf(righteous_word(clientMsg));
-            textMessagesReceived.get(receiver).get(clientName).add(RED + getTimestamp() + " ⇒ " + RESET + GREEN + cliMsg + RESET);
+            textMessagesReceived.get(receiver).get(clientName)
+                    .add(RED + getTimestamp() + " ⇒ " + RESET + GREEN + cliMsg + RESET);
             previousSentMessage.put(clientAddress + clientName, clientMsg);
         }
     }
 
-    public void find_messages_with_matching_word(List<String> list, Socket clientConnection, InetSocketAddress clientAddress) {
+    public void find_messages_with_matching_word(List<String> list, Socket clientConnection,
+            InetSocketAddress clientAddress) {
         String clientName = list.get(0);
         String clientMsg = list.get(1);
 
@@ -224,7 +248,6 @@ public class MainServer {
         System.out.println(msgToSend);
         sendMessage(msgToSend, clientConnection, clientAddress, clientName);
     }
-
 
     private void handleClient(Socket clientConnection, InetSocketAddress clientAddress) {
         coloredPrint("[NEW CONNECTION] " + clientAddress + " connected.\n", GREEN);
@@ -286,12 +309,14 @@ public class MainServer {
                     }
                     case PALINDROME -> {
                         userList.get(clientAddress + clientName).put("option", PALINDROME);
-                        sendMessage(BLUE + "Enter a number to check its palindrome nature" + RESET, clientConnection, clientAddress, clientName);
+                        sendMessage(BLUE + "Enter a number to check its palindrome nature" + RESET, clientConnection,
+                                clientAddress, clientName);
                         continue;
                     }
                     case ODD_EVEN -> {
                         userList.get(clientAddress + clientName).put("option", ODD_EVEN);
-                        sendMessage(BLUE + "Enter a number to check its [odd/even] nature" + RESET, clientConnection, clientAddress, clientName);
+                        sendMessage(BLUE + "Enter a number to check its [odd/even] nature" + RESET, clientConnection,
+                                clientAddress, clientName);
                         continue;
                     }
                     case CLIENT_TEXT -> {
@@ -307,7 +332,10 @@ public class MainServer {
                     }
                     default -> {
                         System.out.print(RED + list.get(2) + " ⇒ " + RESET);
-                        System.out.println(BLUE + userList.get(clientAddress + list.get(0)).get("name") + " : " + list.get(1));
+                        System.out.println(
+                                BLUE + userList.get(clientAddress + list.get(0)).get("name") + " : " + list.get(1)
+                                        + RESET + BRIGHT_BLACK + " { Words = " + list.get(1).split(" ").length + " }"
+                                        + RESET);
                     }
                 }
                 String option = userList.get(clientAddress + clientName).get("option");
@@ -318,7 +346,7 @@ public class MainServer {
                         case ODD_EVEN -> odd_even_game(list, clientConnection, clientAddress);
                         case CLIENT_TEXT -> initiate_client_to_client_message(list, clientConnection, clientAddress);
                         case FIND_IN_MESSAGES ->
-                                find_messages_with_matching_word(list, clientConnection, clientAddress);
+                            find_messages_with_matching_word(list, clientConnection, clientAddress);
                         default -> userList.get(clientAddress + clientName).put("option", "");
                     }
 
@@ -327,7 +355,8 @@ public class MainServer {
             } catch (IOException e) {
                 coloredPrint("[UNABLE TO RECEIVE MESSAGE FROM (" + clientName + ")", RED);
                 String current_timestamp = new SimpleDateFormat("HH:mm:ss").format(new Date());
-                System.out.println(RED + current_timestamp + " ⇒ " + RESET + BLUE + clientName + " : DISCONNECTED" + RESET);
+                System.out.println(
+                        RED + current_timestamp + " ⇒ " + RESET + BLUE + clientName + " : DISCONNECTED" + RESET);
                 userList.remove(clientAddress + clientName);
                 break;
             }

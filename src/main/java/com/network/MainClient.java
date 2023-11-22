@@ -17,7 +17,6 @@ import static com.network.Encryption.decryptRailFence;
 import static com.network.Encryption.encryptRailFence;
 import static com.network.UtilFunctions.getTimestamp;
 
-
 public class MainClient {
 
     // ANSI escape codes for text colors
@@ -38,12 +37,14 @@ public class MainClient {
     private static final String GET_PREVIOUS_MESSAGE = "get_previous_messages";
     private static final String FIND_IN_MESSAGES = "get_messages_with_word";
     private static final int PORT = 4000;
-    private static final String SERVER = "localhost";
+    // private static final String SERVER = "localhost";
+    private static final String SERVER = "192.168.47.209";
+
     private final HashMap<String, String> hashMap = new HashMap<>();
     private final Socket clientSocket;
     private final PrintWriter out;
     private final BufferedReader in;
-    //    KEYS
+    // KEYS
     private long P; // (Same for both server and client) will be received from server
     private long G; // (Same for both server and client) will be received from server
     private long sharedSecretKey;
@@ -82,7 +83,8 @@ public class MainClient {
     }
 
     private long power(long a, long b, long P) {
-        if (b == 1) return a;
+        if (b == 1)
+            return a;
         return (long) (Math.pow(a, b) % P);
     }
 
@@ -158,7 +160,8 @@ public class MainClient {
 
     public boolean find_messages_with_matching_word(boolean connected) throws IOException {
         sendMessage(FIND_IN_MESSAGES);
-        String response = input(YELLOW + "Enter a word to initiate search.\n" + RESET + BRIGHT_BLACK + "Or Enter EXIT to leave." + RESET);
+        String response = input(YELLOW + "Enter a word to initiate search.\n" + RESET + BRIGHT_BLACK
+                + "Or Enter EXIT to leave." + RESET);
         if (response.equalsIgnoreCase("exit")) {
             sendMessage(DISCONNECT_MESSAGE);
             connected = false;
@@ -210,7 +213,8 @@ public class MainClient {
                 }
             }
             System.out.println("           " + "Enter ⇒ " + "[get]" + ": " + "Get Received Messages");
-            System.out.println("           " + "Enter ⇒ " + "[getPrev]" + ": " + "Send Previous Message to other client");
+            System.out
+                    .println("           " + "Enter ⇒ " + "[getPrev]" + ": " + "Send Previous Message to other client");
             connected = initiate_client_to_client_message(userChoice);
         } catch (JsonSyntaxException e) {
             System.err.println("Error parsing JSON: " + e.getMessage());
@@ -271,7 +275,8 @@ public class MainClient {
                 break;
             }
         }
-        if (input(BRIGHT_BLACK + "Enter EXIT to exit the game or press ENTER to continue." + RESET).equalsIgnoreCase("exit")) {
+        if (input(BRIGHT_BLACK + "Enter EXIT to exit the game or press ENTER to continue." + RESET)
+                .equalsIgnoreCase("exit")) {
             sendMessage(DISCONNECT_MESSAGE);
             connected = false;
         }
@@ -284,7 +289,8 @@ public class MainClient {
         sendMessage(msg);
         receiveMessage();
         System.out.println();
-        if (input(BRIGHT_BLACK + "Enter EXIT to exit the game or press ENTER to continue." + RESET).equalsIgnoreCase("exit")) {
+        if (input(BRIGHT_BLACK + "Enter EXIT to exit the game or press ENTER to continue." + RESET)
+                .equalsIgnoreCase("exit")) {
             sendMessage(DISCONNECT_MESSAGE);
             connected = false;
         }
@@ -297,7 +303,8 @@ public class MainClient {
         sendMessage(msg);
         receiveMessage();
         System.out.println();
-        if (input(BRIGHT_BLACK + "Enter EXIT to exit the game or press ENTER to continue." + RESET).equalsIgnoreCase("exit")) {
+        if (input(BRIGHT_BLACK + "Enter EXIT to exit the game or press ENTER to continue." + RESET)
+                .equalsIgnoreCase("exit")) {
             sendMessage(DISCONNECT_MESSAGE);
             connected = false;
         }
@@ -306,7 +313,9 @@ public class MainClient {
 
     public boolean initiate_client_to_client_message(List<String> userChoice) throws IOException {
         boolean connected = true;
-        System.out.println(RED + getTimestamp() + " ⇒ " + RESET + BLUE + "Server : " + "Choose the client from the above options " + RESET + BRIGHT_BLACK + "OR type EXIT to leave." + RESET);
+        System.out.println(
+                RED + getTimestamp() + " ⇒ " + RESET + BLUE + "Server : " + "Choose the client from the above options "
+                        + RESET + BRIGHT_BLACK + "OR type EXIT to leave." + RESET);
         while (true) {
             String response = input(YELLOW + "Enter your choice\n");
             if (response.equalsIgnoreCase("exit")) {
@@ -347,7 +356,8 @@ public class MainClient {
                 received = received.replace(words[0], words[1]);
                 System.out.println(received);
                 connected = client_to_client_modified(connected, received);
-                if (!connected) break;
+                if (!connected)
+                    break;
                 break;
             }
             String chosenUser;
