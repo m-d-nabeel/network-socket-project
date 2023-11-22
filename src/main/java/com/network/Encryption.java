@@ -18,14 +18,17 @@ public class Encryption {
             // check the direction of flow
             // reverse the direction if we've just
             // filled the top or bottom rail
-            if (row == 0 || row == key - 1) dirDown = !dirDown;
+            if (row == 0 || row == key - 1)
+                dirDown = !dirDown;
 
             // fill the corresponding alphabet
             rail[row][col++] = text.charAt(i);
 
             // find the next row using direction flag
-            if (dirDown) row++;
-            else row--;
+            if (dirDown)
+                row++;
+            else
+                row--;
         }
 
         // now we can construct the cipher using the rail
@@ -60,15 +63,19 @@ public class Encryption {
         // mark the places with '*'
         for (int i = 0; i < cipher.length(); i++) {
             // check the direction of flow
-            if (row == 0) dirDown = true;
-            if (row == key - 1) dirDown = false;
+            if (row == 0)
+                dirDown = true;
+            if (row == key - 1)
+                dirDown = false;
 
             // place the marker
             rail[row][col++] = '*';
 
             // find the next row using direction flag
-            if (dirDown) row++;
-            else row--;
+            if (dirDown)
+                row++;
+            else
+                row--;
         }
 
         // now we can construct the fill the rail matrix
@@ -86,15 +93,20 @@ public class Encryption {
         col = 0;
         for (int i = 0; i < cipher.length(); i++) {
             // check the direction of flow
-            if (row == 0) dirDown = true;
-            if (row == key - 1) dirDown = false;
+            if (row == 0)
+                dirDown = true;
+            if (row == key - 1)
+                dirDown = false;
 
             // place the marker
-            if (rail[row][col] != '*') result.append(rail[row][col++]);
+            if (rail[row][col] != '*')
+                result.append(rail[row][col++]);
 
             // find the next row using direction flag
-            if (dirDown) row++;
-            else row--;
+            if (dirDown)
+                row++;
+            else
+                row--;
         }
         return result.toString();
     }

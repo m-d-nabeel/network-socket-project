@@ -66,3 +66,4 @@ These codes are used for text colors in the console.
 3. Verify that the client is running on the same port as the server to establish a successful connection.
 
 By following these steps, you can ensure that the server and client are properly configured and connected. This project provides a foundation for secure communication and interactive tasks between multiple clients.
+ 

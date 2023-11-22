@@ -8,3 +8,4 @@ public class UtilFunctions {
         return new SimpleDateFormat("HH:mm:ss").format(new Date());
     }
 }
+ 
