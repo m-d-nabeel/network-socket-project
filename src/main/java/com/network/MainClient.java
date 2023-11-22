@@ -37,8 +37,8 @@ public class MainClient {
     private static final String GET_PREVIOUS_MESSAGE = "get_previous_messages";
     private static final String FIND_IN_MESSAGES = "get_messages_with_word";
     private static final int PORT = 4000;
-    // private static final String SERVER = "localhost";
-    private static final String SERVER = "192.168.47.209";
+    private static final String SERVER = "localhost";
+    // private static final String SERVER = "192.168.47.209";
 
     private final HashMap<String, String> hashMap = new HashMap<>();
     private final Socket clientSocket;
