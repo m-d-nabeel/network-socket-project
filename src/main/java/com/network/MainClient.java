@@ -420,6 +420,7 @@ public class MainClient {
         }
     }
 
+    @SuppressWarnings("unused")
     private static class Message {
         private final String msg;
         private final String name;

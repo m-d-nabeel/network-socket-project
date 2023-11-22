@@ -1,6 +1,7 @@
 package com.network;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -118,7 +119,9 @@ public class MainServer {
 
     private List<String> decodeMessage(String strReceived, InetSocketAddress clientAddress, Socket clientConnection) {
         String decryptedText = decryptRailFence(strReceived, (int) sharedSecretKey);
-        HashMap<String, String> clientObject = new Gson().fromJson(decryptedText, HashMap.class);
+        HashMap<String, String> clientObject = new Gson().fromJson(decryptedText,
+                new TypeToken<HashMap<String, String>>() {
+                }.getType());
         String clientName = clientObject.get("name");
         coloredPrint(clientName + " ⇒ " + strReceived, BRIGHT_BLACK);
         List<String> list = new ArrayList<>();
