@@ -1,1 +1,15 @@
 LOGS:
+{"msg":"!FIRST_CONNECTION!","name":"Nabeel","timestamp":"17:29:33","receiver":"SERVER"}
+{"msg":"initiate_client_message","name":"Nabeel","timestamp":"17:29:36","receiver":"SERVER"}
+{"msg":"Hey bro how us it","name":"Nabeel","timestamp":"17:29:42","receiver":"localhost/127.0.0.1:4000Nabeel"}
+{"msg":"initiate_client_message","name":"Nabeel","timestamp":"17:29:44","receiver":"SERVER"}
+{"msg":"not gonna love it do we","name":"Nabeel","timestamp":"17:29:51","receiver":"localhost/127.0.0.1:4000Nabeel"}
+{"msg":"initiate_client_message","name":"Nabeel","timestamp":"17:29:53","receiver":"SERVER"}
+{"msg":"what can we even do in this case","name":"Nabeel","timestamp":"17:30:02","receiver":"localhost/127.0.0.1:4000Nabeel"}
+{"msg":"initiate_client_message","name":"Nabeel","timestamp":"17:30:04","receiver":"SERVER"}
+{"msg":"get_all_received_messages","name":"Nabeel","timestamp":"17:30:05","receiver":"SERVER"}
+{"msg":"initiate_client_message","name":"Nabeel","timestamp":"17:30:07","receiver":"SERVER"}
+{"msg":"get_previous_messages","name":"Nabeel","timestamp":"17:30:09","receiver":"SERVER"}
+{"msg":"initiate_client_message","name":"Nabeel","timestamp":"17:30:18","receiver":"SERVER"}
+{"msg":"what can we even do in this tragedy","name":"Nabeel","timestamp":"17:30:20","receiver":"localhost/127.0.0.1:4000Nabeel"}
+{"msg":"!DISCONNECTED!","name":"Nabeel","timestamp":"17:30:23","receiver":"SERVER"}
